@@ -1,11 +1,10 @@
-export default function handler(request, response) {
+export default function (req, res) {
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
   
-  // Set CORS headers just in case
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Content-Type', 'application/json');
   
-  response.status(200).json({
-    backendUrl: backendUrl
-  });
+  res.statusCode = 200;
+  res.end(JSON.stringify({ backendUrl }));
 }
