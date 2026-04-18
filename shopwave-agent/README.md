@@ -2,6 +2,10 @@
 
 > **Production-Grade ReAct Agent Demo for Ksolve Agentic AI Hackathon 2026**
 
+## 🌐 Live Deployment
+- **Frontend (Dashboard)**: [shopwave-agent-ksolve-hackathon.vercel.app](https://shopwave-agent-ksolve-hackathon.vercel.app/)
+- **Backend (Agent API)**: [shopwave-agent-ksolve-hackathon.onrender.com](https://shopwave-agent-ksolve-hackathon.onrender.com/health)
+
 ShopWave is an autonomous customer support resolution system that leverages the **Reason → Act → Observe (ReAct)** pattern to handle e-commerce support tickets with zero human intervention. It features a premium real-time dashboard, hybrid caching, and a robust safety-first architecture.
 
 ![Architecture](architecture.png)
