@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopWave Auto-Agent Demo</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">🌊</div>
+        <h1>ShopWave <span>Auto-Agent</span></h1>
+      </div>
+      <div class="actions">
+        <button id="resolveAllBtn" class="btn primary-btn">
+          <span class="btn-icon">⚡</span> Resolve All Tickets
+        </button>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <div class="left-panel">
+        <div class="panel-header">
+          <h2>Pending Tickets (<span id="ticketCount">0</span>)</h2>
+        </div>
+        <div class="ticket-list" id="ticketList">
+          <!-- Tickets will be injected here -->
+          <div class="loading">Loading tickets...</div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="panel-header">
+          <h2>Agent Execution Log</h2>
+          <div class="stats" id="statsPanel" style="display: none;">
+            <span class="badge success"><span id="statResolved">0</span> Resolved</span>
+            <span class="badge warning"><span id="statEscalated">0</span> Escalated</span>
+            <span class="badge danger"><span id="statFailed">0</span> Failed</span>
+          </div>
+        </div>
+        <div class="execution-log" id="executionLog">
+          <div class="empty-state">
+            <div class="empty-icon">🤖</div>
+            <h3>Agent is idle</h3>
+            <p>Click "Resolve All Tickets" to start autonomous processing.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

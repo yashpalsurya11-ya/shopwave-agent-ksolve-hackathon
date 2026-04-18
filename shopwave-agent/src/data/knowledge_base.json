@@ -1,0 +1,50 @@
+[
+  {
+    "id": "KB-001",
+    "category": "returns",
+    "title": "Standard Return Policy",
+    "content": "ShopWave offers a standard 30-day return window for most products from the delivery date. Items must be in original condition and packaging. Electronics have a 15-day return window. Electronics accessories have a 60-day return window. Returns are not accepted for used hygiene products (yoga mats, etc.) or devices registered online."
+  },
+  {
+    "id": "KB-002",
+    "category": "refunds",
+    "title": "Refund Processing Times",
+    "content": "Once a refund is approved, it takes 5-7 business days to appear in your account. For credit card payments, the refund goes back to the original card. For wallet payments, refunds are instant. Refund confirmation emails are sent immediately upon processing."
+  },
+  {
+    "id": "KB-003",
+    "category": "warranty",
+    "title": "Warranty Claims Process",
+    "content": "Products under warranty can be claimed for manufacturing defects. The warranty period varies by product. To claim warranty, customers must provide proof of purchase and describe the defect. Warranty does not cover accidental damage, water damage, or user misuse. Warranty claims are handled by our specialist team."
+  },
+  {
+    "id": "KB-004",
+    "category": "orders",
+    "title": "Order Cancellation Policy",
+    "content": "Orders in 'processing' status can be cancelled for free by contacting support. Orders that have already shipped cannot be cancelled but can be returned once received. Cancellation requests are processed within 1 business hour during business hours (9 AM - 6 PM)."
+  },
+  {
+    "id": "KB-005",
+    "category": "shipping",
+    "title": "Shipping and Delivery Information",
+    "content": "Standard shipping takes 3-5 business days. Express shipping takes 1-2 business days. Orders are shipped within 24 hours of placement. Tracking information is provided via email once the order ships. Contact support if your order hasn't arrived within the estimated delivery window."
+  },
+  {
+    "id": "KB-006",
+    "category": "exchanges",
+    "title": "Exchange Policy",
+    "content": "ShopWave offers exchanges for wrong items or sizes within the return window. Exchanges are processed like returns followed by a new order. Size exchanges for footwear are free within 30 days. Wrong item deliveries qualify for a free exchange regardless of return window, provided reported within 7 days of delivery."
+  },
+  {
+    "id": "KB-007",
+    "category": "vip",
+    "title": "VIP Customer Benefits",
+    "content": "VIP customers enjoy extended return windows, priority support, and case-by-case exceptions reviewed by senior support staff. VIP status is earned after $5000 in lifetime purchases. VIP exceptions for return windows must be pre-approved by management and are noted in the customer's account."
+  },
+  {
+    "id": "KB-008",
+    "category": "damaged",
+    "title": "Damaged Item Policy",
+    "content": "Items damaged on arrival qualify for a full refund or replacement without requiring the item to be returned. Customers should photograph the damage and the packaging. Reports must be made within 72 hours of delivery for fastest resolution. Our team will process damaged item claims within 24 hours."
+  }
+]
