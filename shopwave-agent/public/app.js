@@ -1,8 +1,22 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // ── DEPLOYMENT CONFIG ─────────────────────────────────────────────────────
-    // If deploying to Vercel/Render, update this to your Render URL
-    const API_BASE_URL = window.backendUrl || 'http://localhost:3000';
-    console.log(`[Config] Using API Base: ${API_BASE_URL}`);
+    let API_BASE_URL = window.backendUrl || 'http://localhost:3000';
+    
+    // Attempt to fetch dynamic config from Vercel Serverless Function
+    try {
+        const configResp = await fetch('/api/config');
+        if (configResp.ok) {
+            const configData = await configResp.json();
+            if (configData.backendUrl) {
+                API_BASE_URL = configData.backendUrl;
+                console.log(`[Config] Using Vercel Env Var: ${API_BASE_URL}`);
+            }
+        }
+    } catch (e) {
+        console.log("[Config] Falling back to default/manual backend URL");
+    }
+
+    console.log(`[Runtime] API Base: ${API_BASE_URL}`);
 
     const ticketList = document.getElementById('ticketList');
     const ticketSearch = document.getElementById('ticketSearch');
