@@ -10,12 +10,14 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import { reactLoop } from './agent/reactLoop.js';
 import { buildAuditEntry, writeAuditLog, readAuditLog } from './logger/auditLogger.js';
+import { getCache, setCache } from './lib/redis.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,12 +40,13 @@ app.use((req, res, next) => {
 
 // ── Data Loader ───────────────────────────────────────────────────────────────
 
-function loadTickets() {
+async function loadTickets() {
   const path = join(DATA_DIR, 'tickets.json');
   if (!existsSync(path)) {
     throw new Error(`tickets.json not found at ${path}`);
   }
-  return JSON.parse(readFileSync(path, 'utf-8'));
+  const data = await readFile(path, 'utf-8');
+  return JSON.parse(data);
 }
 
 // ── Core ticket resolver ─────────────────────────────────────────────────────
@@ -53,13 +56,64 @@ function loadTickets() {
  * Returns an audit log entry regardless of success or failure.
  *
  * @param {Object} ticket
+ * @param {boolean} bypassCache
  * @returns {Promise<Object>} audit entry
  */
-async function resolveTicket(ticket) {
+async function resolveTicket(ticket, bypassCache = false) {
   const start = Date.now();
   try {
     console.log(`\n[Resolver] Processing ticket: ${ticket.ticket_id}`);
+
+    // --- UPSTASH REDIS HYBRID CACHE ---
+    if (!bypassCache) {
+      // 1. Exact Match via Ticket ID
+      const ticketKey = `ticket:${ticket.ticket_id}`;
+      const exactCache = await getCache(ticketKey);
+      
+      if (exactCache) {
+        console.log(`[ReAct] ⚡ Cache HIT (ticket_id): Exact match for ${ticket.ticket_id}`);
+        // ensure processing time covers cache hit duration (~10-50ms)
+        exactCache.processing_time_ms = Date.now() - start;
+        return buildAuditEntry(ticket, exactCache);
+      }
+
+      // 2. Semantic Match via Subject
+      if (ticket.subject) {
+        const normalizedSubject = ticket.subject.toLowerCase().trim();
+        const subjectKey = `subject:${normalizedSubject}`;
+        const semanticCache = await getCache(subjectKey);
+
+        if (semanticCache) {
+          console.log(`[ReAct] ⚡ Cache HIT (subject): Semantic match for "${normalizedSubject}"`);
+          // override specific details for the current ticket
+          const result = {
+            ...semanticCache,
+            ticket_id: ticket.ticket_id,
+            processing_time_ms: Date.now() - start
+          };
+          return buildAuditEntry(ticket, result);
+        }
+      }
+    }
+    
+    console.log(`[ReAct] ⏱ Cache MISS → calling Gemini AI Agent...`);
+    // --- END CACHE ---
+
     const result = await reactLoop(ticket);
+
+    // --- SAVE TO UPSTASH ---
+    if (result && result.status === 'resolved') {
+      const ticketKey = `ticket:${ticket.ticket_id}`;
+      // TTL: 24 hours (86400 seconds)
+      await setCache(ticketKey, result, 86400); 
+
+      if (ticket.subject) {
+        const normalizedSubject = ticket.subject.toLowerCase().trim();
+        const subjectKey = `subject:${normalizedSubject}`;
+        await setCache(subjectKey, result, 86400);
+      }
+    }
+
     return buildAuditEntry(ticket, result);
   } catch (err) {
     console.error(`[Resolver] ❌ Ticket ${ticket.ticket_id} failed: ${err.message}`);
@@ -96,9 +150,9 @@ app.get('/health', (req, res) => {
 /**
  * GET /tickets — List all available tickets
  */
-app.get('/tickets', (req, res) => {
+app.get('/tickets', async (req, res) => {
   try {
-    const tickets = loadTickets();
+    const tickets = await loadTickets();
     res.json({
       count: tickets.length,
       tickets: tickets.map((t) => ({
@@ -127,7 +181,7 @@ app.post('/resolve', async (req, res) => {
 
     // If only ticket_id provided, look it up
     if (req.body.ticket_id && !req.body.customer_email) {
-      const tickets = loadTickets();
+      const tickets = await loadTickets();
       ticket = tickets.find((t) => t.ticket_id === req.body.ticket_id);
       if (!ticket) {
         return res.status(404).json({
@@ -169,30 +223,37 @@ app.post('/resolve/all', async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const tickets = loadTickets();
-    // ── CONCURRENCY: SAFE GROQ BATCHING ───────────────────────────────────
+    const tickets = await loadTickets();
+    // ── CONTROLLED BATCH CONCURRENCY ──────────────────────────────────────
     const results = [];
-    const concurrency = 2; // Strict 2 tickets per batch for Groq free tier
-    const delayMs = 12000;  // 12-second delay to completely avoid 6000 TPM limit
+    const provider = process.env.LLM_PROVIDER || 'gemini';
+    const concurrencyVal = parseInt(process.env.CONCURRENCY_LIMIT || '3'); // Hackathon specific concurrency
     
-    for (let i = 0; i < tickets.length; i += concurrency) {
-      const batch = tickets.slice(i, i + concurrency);
-      console.log(`[Queue] Processing batch of ${batch.length} (${i + 1}-${Math.min(i + concurrency, tickets.length)} / ${tickets.length})`);
+    console.log(`[Queue] Starting concurrent processing format for ${tickets.length} tickets`);
+    console.log(`[Queue] Batch concurrency limit dynamically set to: ${concurrencyVal}`);
+    
+    for (let i = 0; i < tickets.length; i += concurrencyVal) {
+      const batch = tickets.slice(i, i + concurrencyVal);
+      const batchNumber = Math.floor(i / concurrencyVal) + 1;
+      const totalBatches = Math.ceil(tickets.length / concurrencyVal);
       
-      const batchResults = await Promise.all(
-        batch.map((ticket) =>
-          resolveTicket(ticket).catch((err) => {
-            console.error(`[Queue] Ticket ${ticket.ticket_id} failed: ${err.message}`);
-            return buildAuditEntry(ticket, null, err);
-          })
-        )
-      );
+      console.log(`\n[Queue] 🏃 Processing Batch ${batchNumber}/${totalBatches} (${batch.length} tickets concurrently)`);
       
+      const batchPromises = batch.map(ticket => {
+        return resolveTicket(ticket).catch((err) => {
+          console.error(`[Queue] Ticket ${ticket.ticket_id} failed: ${err.message}`);
+          return buildAuditEntry(ticket, null, err);
+        });
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
-
-      if (i + concurrency < tickets.length) {
-        console.log(`[Queue] 🧊 Cooling down for ${delayMs/1000} seconds to respect Groq Rate Limits...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+      
+      if (i + concurrencyVal < tickets.length) {
+        // Log dynamic cooling down message
+        console.log(`[Queue] 🧊 Cooling down batch for ${provider} rate limits...`);
+        // Additional safe 2000ms delay between batches
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 

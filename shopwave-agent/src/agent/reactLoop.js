@@ -15,6 +15,7 @@
  */
 
 import 'dotenv/config';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { buildPrompt, parseReActResponse } from './prompts.js';
 import { assertActionSafe } from './safetyGuard.js';
 import { TOOL_REGISTRY } from './tools.js';
@@ -32,6 +33,8 @@ const CONFIDENCE_THRESHOLD = parseFloat(process.env.CONFIDENCE_THRESHOLD || '0.7
  * @returns {Promise<string>} raw LLM text response
  */
 async function callLLM(messages) {
+  // Respect Gemini free tier limits with a slight padding
+  await new Promise(r => setTimeout(r, 2000));
   return callGemini(messages);
 }
 
@@ -40,8 +43,8 @@ async function callGemini(messages) {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error('GEMINI_API_KEY is not set');
 
-    const modelName = 'gemini-1.5-flash';
-    console.log(`[Gemini] Calling model: ${modelName} via fetch (v1)`);
+    const modelName = 'gemini-2.5-flash';
+    console.log(`[Gemini] Calling model: ${modelName} via Google SDK`);
 
     const systemMsg = messages.find((m) => m.role === 'system');
     const userMsg = messages.find((m) => m.role === 'user');
@@ -50,39 +53,24 @@ async function callGemini(messages) {
       ? `${systemMsg.content}\n\n---\n\n${userMsg.content}`
       : userMsg.content;
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${key}`;
+    const genAI = new GoogleGenerativeAI(key);
+    const model = genAI.getGenerativeModel({ model: modelName });
 
-    const payload = {
-      contents: [
-        {
-          parts: [{ text: promptText }]
-        }
-      ]
-    };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: promptText }] }]
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    const text = result.response.text();
 
     // Clean JSON if Gemini wraps it in markdown code fences
     return text.replace(/```json/g, '').replace(/```/g, '').trim();
   } catch (err) {
-    console.error('[Gemini Error] Full Error Details:', {
-      message: err.message,
-      status: err.status,
-      statusText: err.statusText,
-      errorDetails: err.errorDetails
-    });
+    console.error('[Gemini Error] Full Error Details:', err.message);
+
+    // Provide standard error mapping so isRetryable properly detects SDK errors
+    if (err.status) {
+      err.code = err.status.toString();
+    }
 
     // Keeping the fallback logic but making it transparent and ONLY for specific 401/404 errors
     // while we debug the model accessibility issue.
@@ -105,7 +93,7 @@ async function callGemini(messages) {
  * @returns {Promise<{result, retryCount}>}
  */
 async function withRetry(fn, maxRetries = 3) {
-  const delays = [500, 1000, 2000];
+  const delays = [5000, 15000, 30000]; // Exponential backoff for 429s
   let lastError;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -135,13 +123,18 @@ async function withRetry(fn, maxRetries = 3) {
 }
 
 function isRetryable(err) {
-  // Retry on network timeouts, malformed responses, and null responses
+  // Retry on rate limits (429), model overloads (503), timeouts, and malformed responses
   const retryableCodes = ['ETIMEDOUT', 'MALFORMED_RESPONSE', 'NULL_RESPONSE', 'ECONNRESET'];
   if (err.retryable === true) return true;
   if (retryableCodes.includes(err.code)) return true;
-  if (err.message?.includes('timed out')) return true;
-  if (err.message?.includes('malformed')) return true;
-  if (err.message?.includes('ETIMEDOUT')) return true;
+  
+  const msg = err.message || '';
+  if (msg.includes('429') || msg.includes('Too Many Requests')) return true;
+  if (msg.includes('503') || msg.includes('Service Unavailable')) return true;
+  if (msg.includes('timed out')) return true;
+  if (msg.includes('malformed')) return true;
+  if (msg.includes('ETIMEDOUT')) return true;
+  
   return false;
 }
 

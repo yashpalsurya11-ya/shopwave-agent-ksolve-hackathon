@@ -1,57 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShopWave Auto-Agent Demo</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopWave | AI Autonomous Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <div class="app-container">
-    <header class="header">
-      <div class="logo">
-        <div class="logo-icon">🌊</div>
-        <h1>ShopWave <span>Auto-Agent</span></h1>
-      </div>
-      <div class="actions">
-        <button id="resolveAllBtn" class="btn primary-btn">
-          <span class="btn-icon">⚡</span> Resolve All Tickets
-        </button>
-      </div>
-    </header>
+    <div class="bg-glow">
+        <div class="glow-1"></div>
+        <div class="glow-2"></div>
+        <div class="glow-3"></div>
+    </div>
 
-    <main class="dashboard">
-      <div class="left-panel">
-        <div class="panel-header">
-          <h2>Pending Tickets (<span id="ticketCount">0</span>)</h2>
-        </div>
-        <div class="ticket-list" id="ticketList">
-          <!-- Tickets will be injected here -->
-          <div class="loading">Loading tickets...</div>
-        </div>
-      </div>
+    <div class="app-layout">
+        <header class="main-header glass">
+            <div class="logo-area">
+                <div class="logo-icon-container">
+                    <i data-lucide="bot" class="logo-icon"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>ShopWave</h1>
+                    <span class="badge-pulsing">Auto-Agent v1.0</span>
+                </div>
+            </div>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <i data-lucide="check-circle" class="stat-icon success"></i>
+                        <span class="stat-label">Resolved</span>
+                    </div>
+                    <span class="stat-value" id="countResolved">0</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <i data-lucide="arrow-up-right" class="stat-icon warning"></i>
+                        <span class="stat-label">Escalated</span>
+                    </div>
+                    <span class="stat-value" id="countEscalated">0</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <i data-lucide="alert-circle" class="stat-icon danger"></i>
+                        <span class="stat-label">Failures</span>
+                    </div>
+                    <span class="stat-value" id="countFailed">0</span>
+                </div>
+            </div>
 
-      <div class="right-panel">
-        <div class="panel-header">
-          <h2>Agent Execution Log</h2>
-          <div class="stats" id="statsPanel" style="display: none;">
-            <span class="badge success"><span id="statResolved">0</span> Resolved</span>
-            <span class="badge warning"><span id="statEscalated">0</span> Escalated</span>
-            <span class="badge danger"><span id="statFailed">0</span> Failed</span>
-          </div>
-        </div>
-        <div class="execution-log" id="executionLog">
-          <div class="empty-state">
-            <div class="empty-icon">🤖</div>
-            <h3>Agent is idle</h3>
-            <p>Click "Resolve All Tickets" to start autonomous processing.</p>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
+            <div class="header-actions">
+                <button id="resolveAllBtn" class="btn-primary">
+                    <i data-lucide="zap"></i>
+                    <span>Resolve All Tickets</span>
+                </button>
+            </div>
+        </header>
 
-  <script src="app.js"></script>
+        <main class="dashboard">
+            <section class="tickets-panel glass">
+                <div class="panel-header">
+                    <div class="title-with-icon">
+                        <i data-lucide="ticket" class="header-icon"></i>
+                        <h2>Pending Tickets</h2>
+                    </div>
+                    <span class="ticket-count-badge" id="ticketCount">0</span>
+                </div>
+                <div class="search-container">
+                    <div class="search-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="ticketSearch" placeholder="Filter tickets..." autocomplete="off">
+                    </div>
+                </div>
+                <div class="ticket-scroll-area" id="ticketList">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <span>Initializing Agent...</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="execution-panel glass">
+                <div class="panel-header">
+                    <div class="title-with-icon">
+                        <i data-lucide="activity" class="header-icon"></i>
+                        <h2>Agent Execution Log</h2>
+                    </div>
+                    <div id="processingIndicator" class="processing-spinner" style="display: none;">
+                        <span class="pulse"></span>
+                        Agent Thinking...
+                    </div>
+                </div>
+                <div class="log-area" id="executionLog">
+                    <div class="empty-state">
+                        <div class="empty-vector">
+                            <i data-lucide="monitor-play"></i>
+                        </div>
+                        <h3>System Idle</h3>
+                        <p>Awaiting batch command to start autonomous support resolution.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Deployment Helper: Allow setting backend via ?backend=... query param
+        const urlParams = new URLSearchParams(window.location.search);
+        const backendParam = urlParams.get('backend');
+        if (backendParam) {
+            window.backendUrl = backendParam;
+            console.log("Backend URL set from query param:", window.backendUrl);
+        }
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>
