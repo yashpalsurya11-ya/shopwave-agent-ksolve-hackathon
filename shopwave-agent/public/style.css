@@ -846,3 +846,55 @@ small {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
 }
+
+/* Error States */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    text-align: center;
+    height: 100%;
+    gap: 1rem;
+    color: var(--text-muted);
+}
+
+.error-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--danger);
+    margin-bottom: 0.5rem;
+}
+
+.error-msg {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.error-submsg {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    word-break: break-all;
+}
+
+.error-hint {
+    font-size: 0.9rem;
+    max-width: 300px;
+    line-height: 1.5;
+}
+
+.error-hint b {
+    color: #fff;
+}
+
+.error-hint code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+}

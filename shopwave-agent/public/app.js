@@ -1,23 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // ── DEPLOYMENT CONFIG ─────────────────────────────────────────────────────
-    let API_BASE_URL = window.backendUrl || 'http://localhost:3000';
-    
-    // Attempt to fetch dynamic config from Vercel Serverless Function
-    try {
-        const configResp = await fetch('/api/config');
-        if (configResp.ok) {
-            const configData = await configResp.json();
-            if (configData.backendUrl) {
-                API_BASE_URL = configData.backendUrl;
-                console.log(`[Config] Using Vercel Env Var: ${API_BASE_URL}`);
-            }
-        }
-    } catch (e) {
-        console.log("[Config] Falling back to default/manual backend URL");
-    }
-
-    console.log(`[Runtime] API Base: ${API_BASE_URL}`);
-
+    // UI Elements
     const ticketList = document.getElementById('ticketList');
     const ticketSearch = document.getElementById('ticketSearch');
     const executionLog = document.getElementById('executionLog');
@@ -28,21 +10,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     const countFailed = document.getElementById('countFailed');
     const processingIndicator = document.getElementById('processingIndicator');
 
+    // ── DEPLOYMENT CONFIG ─────────────────────────────────────────────────────
+    let API_BASE_URL = window.backendUrl || 'http://localhost:3000';
+    
+    // Attempt to fetch dynamic config from Vercel Serverless Function
+    try {
+        console.log("[Config] Attempting to fetch serverless config...");
+        const configResp = await fetch('/api/config');
+        if (configResp.ok) {
+            const configData = await configResp.json();
+            if (configData.backendUrl) {
+                API_BASE_URL = configData.backendUrl;
+                console.log(`[Config] Success! Using Vercel Env Var: ${API_BASE_URL}`);
+            }
+        } else {
+            console.warn(`[Config] Serverless function returned status ${configResp.status}. Check Vercel Root Directory settings.`);
+        }
+    } catch (e) {
+        console.log("[Config] Error fetching config, falling back to default/manual backend URL", e);
+    }
+
+    // Clean up URL (removing trailing slash if present)
+    if (API_BASE_URL.endsWith('/')) {
+        API_BASE_URL = API_BASE_URL.slice(0, -1);
+    }
+
+    console.log(`[Runtime] Final API Base: ${API_BASE_URL}`);
+
     let isProcessing = false;
     let allTickets = [];
 
     // Fetch initial tickets
     async function fetchTickets() {
         try {
+            ticketList.innerHTML = `
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <span>Connecting to Backend...</span>
+                </div>`;
+
             const response = await fetch(`${API_BASE_URL}/tickets`);
-            const data = await response.json();
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
             
-            allTickets = data.tickets;
+            const data = await response.json();
+            allTickets = data.tickets || [];
             renderTickets(allTickets);
-            ticketCount.textContent = data.count;
+            ticketCount.textContent = data.count || allTickets.length;
         } catch (err) {
             console.error('Failed to fetch tickets:', err);
-            ticketList.innerHTML = `<div class="error">Failed to load tickets from ${API_BASE_URL}. Is the server running?</div>`;
+            ticketList.innerHTML = `
+                <div class="error-container glass">
+                    <i data-lucide="alert-triangle" class="error-icon"></i>
+                    <div class="error-msg">Failed to load tickets from backend</div>
+                    <div class="error-submsg">${API_BASE_URL}</div>
+                    <p class="error-hint">If you are on Vercel, ensure the <b>Root Directory</b> is set to <code>shopwave-agent</code> (not <code>public</code>).</p>
+                </div>`;
+            lucide.createIcons();
         }
     }
 
