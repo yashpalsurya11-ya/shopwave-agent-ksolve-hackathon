@@ -1,5 +1,6 @@
 node_modules/
 .env
-outputs/audit_log.json
+outputs/
+scratch/
 *.log
 .DS_Store

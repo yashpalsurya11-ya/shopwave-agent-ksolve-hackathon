@@ -1,77 +1,115 @@
-# ShopWave Autonomous Support Resolution Agent
+# 🤖 ShopWave | AI Autonomous Support Agent
 
-A production-grade AI support agent built for the Agentic AI Hackathon 2026. This agent autonomously resolves customer support tickets using a custom ReAct (Reason → Act → Observe) loop, complete with realistic tool failure simulations, fault tolerance, and a programmatic safety guard.
+> **Production-Grade ReAct Agent Demo for Ksolve Agentic AI Hackathon 2026**
+
+ShopWave is an autonomous customer support resolution system that leverages the **Reason → Act → Observe (ReAct)** pattern to handle e-commerce support tickets with zero human intervention. It features a premium real-time dashboard, hybrid caching, and a robust safety-first architecture.
 
 ![Architecture](architecture.png)
 
-## Features
+## 🌟 Key Features
 
-- **Custom ReAct Loop**: No heavy frameworks (LangChain/LangGraph). Pure Node.js loop with reasoned tool execution.
-- **Fault Tolerance**: Exponential backoff (500ms → 1000ms → 2000ms) for failed tool calls mapping to realistic network issues.
-- **Safety Guard**: Programmatically enforces that `issueRefund()` cannot be executed unless `checkRefundEligibility()` was called first. Cannot be overridden by the LLM.
-- **Parallel Processing**: Uses `Promise.all()` to process all 20 tickets concurrently. Per-ticket error boundaries ensure one failure never stops the others.
-- **Dual LLM Support**: Supports both OpenAI (`gpt-4o`) and Google Gemini (`gemini-1.5-pro`) via `.env` toggle.
-- **Comprehensive Audit Logging**: Structured JSON logging for every ticket, tracking the exact tool call sequence, duration, retries, and reasoning trace.
+- **⚡ Advanced ReAct Loop**: A custom-built reasoning engine (no LangChain overhead) that allows the agent to think, call tools, and verify observations before providing a final resolution.
+- **🚀 Ultra-Fast Caching**: Implements a **Hybrid Upstash Redis Cache**. Repeated tickets or similar subjects are resolved in milliseconds without hitting the LLM, significantly reducing latency and costs.
+- **💎 Premium Dashboard**: A state-of-the-art Glassmorphism UI built with Vanilla JS, featuring real-time execution logs, ticket filtering, and live status updates.
+- **🛡️ Programmatic Safety Guard**: A hard-coded validation layer that prevents sensitive actions (like `issueRefund`) from executing unless prerequisites (like `checkRefundEligibility`) are met. **LLM hallucinations cannot bypass this.**
+- **🧬 Parallel Batch Processing**: Handles high-volume bursts by processing up to 20 tickets concurrently with sophisticated batching and cooling periods to stay within API rate limits.
+- **📉 Fault Tolerance**: Built-in exponential backoff and retry logic for tool calls, simulating real-world network instability and API timeouts.
 
-## Project Structure
+---
+
+## 🏗️ System Architecture
+
+The project is split into a hybrid cloud deployment for maximum performance:
+
+- **Frontend (Vercel)**: Serves the static Glassmorphism dashboard and provides a Serverless API proxy for configuration.
+- **Backend (Render)**: An Express/Node.js server that hosts the ReAct Agent, tool logic, and concurrency engine.
+- **Cache (Upstash)**: Global Redis layer for high-speed ticket resolution.
+- **LLM (Gemini 1.5 Flash)**: State-of-the-art reasoning for natural language understanding and tool selection.
+
+---
+
+## 📁 Project Structure
 
 ```text
 shopwave-agent/
-├── src/
-│   ├── index.js            # Express server & concurrency engine
+├── public/                 # 🖥️ Frontend (Vanilla JS + CSS)
+│   ├── app.js              # Dashboard logic & Live logs
+│   ├── style.css           # Premium Glassmorphism UI
+│   └── index.html          # Main Entry Point
+├── api/                    # ☁️ Vercel Serverless Functions
+│   └── config.js           # Dynamic environment config
+├── src/                    # ⚙️ Backend Agent Logic
+│   ├── index.js            # Concurrency engine & Express API
 │   ├── agent/
-│   │   ├── reactLoop.js    # Core Reason → Act → Observe loop
-│   │   ├── tools.js        # 8 simulated async tools with failures
-│   │   ├── safetyGuard.js  # Refund block and hard enforcements
-│   │   └── prompts.js      # System instruction and JSON parser
-│   ├── data/               # Mock data (tickets, orders, etc.)
-│   └── logger/
-│       └── auditLogger.js  # Audit log writer
-├── outputs/
-│   └── audit_log.json      # Structured agent execution logs
-├── failure_modes.md        # Documentation of edge cases
-├── architecture.png        # System design
-└── .env.example            # Secrets template
+│   │   ├── reactLoop.js    # Core ReAct Thinking Loop
+│   │   ├── tools.js        # 8 simulated async e-commerce tools
+│   │   └── safetyGuard.js  # Safety & Validation layer
+│   └── lib/
+│       └── redis.js        # Upstash Redis integration
+├── vercel.json             # Deployment & Routing Rules
+└── .env                    # Environment Setup
 ```
 
-## Setup & Single Run Command
+---
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+## 🚀 Quick Start & Setup
 
-2. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` and configure your API key.
-   ```bash
-   cp .env.example .env
-   ```
-   *Edit `.env` and set `LLM_PROVIDER=openai` (or `gemini`) and provide the corresponding API key.*
+### 1. Local Installation
+```bash
+git clone https://github.com/yashpalsurya11-ya/shopwave-agent-ksolve-hackathon.git
+cd shopwave-agent
+npm install
+```
 
-3. **Start the Server & Run the Agent (Single Command)**:
-   ```bash
-   npm start
-   ```
-   This will start the Express server on port 3000.
+### 2. Environment Configuration
+Create a `.env` file in the root based on `.env.example`:
+```env
+# Core API
+GEMINI_API_KEY=your_gemini_key
 
-4. **Trigger Concurrent Resolution**:
-   Open a new terminal and run:
-   ```bash
-   curl -X POST http://localhost:3000/resolve/all
-   ```
-   This will immediately process all 20 tickets in parallel.
+# Cache (Upstash Redis)
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
 
-5. **View Results**:
-   Once complete, check `outputs/audit_log.json` for the comprehensive execution log.
+# Deployment URL
+BACKEND_URL=http://localhost:3000
+```
 
-## Tool Overview
+### 3. Run Locally
+```bash
+# Start the Backend
+npm start
 
-The agent has access to 8 tools simulating a real e-commerce backend:
-1. `getOrder` - Read order data (20% timeout failure rate)
-2. `checkRefundEligibility` - Verify return window & status (15% malformed JSON failure rate)
-3. `getCustomer` - Fetch user tier (10% partial data failure rate)
-4. `getProduct` - Fetch return policy details (5% null response rate)
-5. `searchKnowledgeBase` - Pull policy rules
-6. `issueRefund` - WRITE (Protected by safety guard)
-7. `sendReply` - WRITE
-8. `escalate` - Route to human agent
+# Open the Frontend
+# Simply open public/index.html in your browser
+```
+
+---
+
+## 🛠️ Tool Ecosystem
+
+The agent has access to 8 sophisticated tools simulating a real e-commerce backend:
+
+- `getOrder`: Read order database (includes timeout simulations).
+- `checkRefundEligibility`: Verifies return windows (includes malformed data simulations).
+- `getCustomer`: Fetch customer tier and loyalty status.
+- `getProduct`: Pull return policies and product-specific guidelines.
+- `searchKnowledgeBase`: Semantic search across store policies.
+- `issueRefund`: **[PROTECTED]** Executes financial transactions.
+- `sendReply`: Dispatch emails to customers.
+- `escalate`: Hand off complex cases to a human support lead.
+
+---
+
+## 🔒 Security & Optimization
+
+- **API Security**: Environment variables are never exposed to the frontend. A serverless proxy (`/api/config`) handles backend discovery.
+- **Routing Safety**: Vercel rewrites prevent public access to `.env` or internal source code folders.
+- **Rate-Limit Handling**: Configurable concurrency batches (default: 3) ensure the system doesn't hit Gemini API quotas during mass resolution.
+
+---
+
+### 🏆 Hackathon Notes
+This agent was designed to prove that agentic workflows can be **performant, safe, and beautiful**. By moving away from heavy agent frameworks, we achieved a lightweight, highly customizable loop that feels like a real product.
+
+**Developed for Ksolve Agentic AI Hackathon 2026.**
