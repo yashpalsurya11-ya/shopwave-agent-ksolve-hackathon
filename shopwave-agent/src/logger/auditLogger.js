@@ -17,8 +17,12 @@ const OUTPUTS_DIR = join(__dirname, '..', '..', 'outputs');
 const AUDIT_LOG_PATH = join(OUTPUTS_DIR, 'audit_log.json');
 
 // Ensure outputs directory exists
-if (!existsSync(OUTPUTS_DIR)) {
-  mkdirSync(OUTPUTS_DIR, { recursive: true });
+try {
+  if (!existsSync(OUTPUTS_DIR)) {
+    mkdirSync(OUTPUTS_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn(`[AuditLogger] Warning: Could not create outputs directory (likely read-only FS): ${e.message}`);
 }
 
 /**
